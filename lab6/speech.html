@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Speech Synthesis and Recognition</title>
+    <link rel="stylesheet" href="styles.css">
+     
+</head>
+<body>
+    <h1>Синтезатор речи</h1>
+    <textarea id="text" rows="4" cols="50"></textarea>
+    <button id="speak">Сказать</button>
+    <label>Голос:</label>
+    <select id="voices"></select>
+    <label>Скорость:</label>
+    <input type="range" min="0.5" max="2" value="1" step="0.1" id="rate"/>
+    <label>Громкость:</label>
+    <input type="range" min="0" max="1" value="1" step="0.1" id="volume"/>
+
+    <h1>Распознаватель речи</h1>
+    <button id="start">Начать слушать</button>
+    <textarea id="result" rows="8" cols="50"></textarea>
+
+    <script>
+        // Синтезатор речи
+        let voices = [];
+        let utterance;
+        const textArea = document.querySelector('#text');
+        const speakButton = document.querySelector('#speak');
+        const voicesSelect = document.querySelector('#voices');
+        const rateInput = document.querySelector('#rate');
+        const volumeInput = document.querySelector('#volume');
+
+        function populateVoices() {
+            voices = window.speechSynthesis.getVoices();
+            voicesSelect.innerHTML = voices
+                .map(voice => `<option value="${voice.name}">${voice.name} (${voice.lang})</option>`)
+                .join('');
+        }
+
+        function speak() {
+            utterance = new SpeechSynthesisUtterance(textArea.value);
+            const selectedVoiceName = voicesSelect.selectedOptions[0].value;
+            const selectedVoice = voices.find(voice => voice.name === selectedVoiceName);
+            utterance.voice = selectedVoice;
+            utterance.rate = rateInput.value;
+            utterance.volume = volumeInput.value;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        window.speechSynthesis.onvoiceschanged = populateVoices;
+        speakButton.addEventListener('click', speak);
+
+        // Распознаватель речи
+        const resultArea = document.querySelector('#result');
+        const startButton = document.querySelector('#start');
+
+        let recognition;
+
+        if ('SpeechRecognition' in window) {
+            recognition = new SpeechRecognition();
+        } else if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+        } else {
+            alert('Ваш браузер не поддерживает распознавание речи.');
+            startButton.disabled = true;
+        }
+
+        if (recognition) {
+            recognition.lang = 'ru-RU';
+            recognition.interimResults = false;
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+
+                // Обработка голосовых команд
+                if (transcript === 'Стоп.') {
+                    window.speechSynthesis.pause();
+                } else if (transcript === 'Возобновитъ.') {
+                    window.speechSynthesis.resume();
+                } else if (transcript === 'Открыть калькулятор.') {
+                    window.open('http://www.google.com/search?q=calculator', '_blank');
+                } else if (transcript === 'Открыть календарь.') {
+                    window.open('http://www.google.com/calendar', '_blank');
+                } else if (transcript === 'Открыть электронную почту.') {
+                    window.open('http://www.google.com/gmail', '_blank');
+                } else {
+                    resultArea.value = transcript;
+                }
+            };
+
+            recognition.onerror = function(event) {
+                alert('Ошибка распознавания: ' + event.error);
+            };
+
+            startButton.addEventListener('click', function() {
+                recognition.start();
+            });
+        }
+    </script>
+</body>
+</html>
